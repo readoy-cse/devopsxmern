@@ -1,215 +1,44 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HashLoader from "react-spinners/HashLoader";
-
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { baseUrl } from '../../utils/env';
 
+const TYPES = ['Homework', 'Essay', 'Project', 'Quiz', 'Exam', 'Lab', 'Other'];
 const Register = () => {
-
-    // Image Upload
-    const imgUrl =
-        "https://media.istockphoto.com/id/587805038/vector/profile-picture-vector-illustration.jpg?s=612x612&w=0&k=20&c=soUW134LXdq5F9LcRtniX--ZOPNQqTdhQJrewQiZsf4=";
-
-    const [image, setImage] = useState(null);
-    const [preview, setPreview] = useState(null);
-    const [loading, setLoading] = useState();
-
-    const nevigate = useNavigate();
-
-    function Upload(e) {
-        const file = e.target.files[0];
-        if (file.size >= 1048576 * 10) {
-            return toast.error("Max Upload Size 4MB");
-        } else {
-            setImage(file);
-            setPreview(URL.createObjectURL(file));
-        }
-    }
-
-    async function UploadImage() {
-        setLoading(true);
-        const data = new FormData();
-        data.append("file", image);
-        data.append("upload_preset", "sjxeivct");
-        try {
-            let res = await fetch(
-                "https://api.cloudinary.com/v1_1/daoltrjyw/image/upload",
-                {
-                    method: "POST",
-                    body: data,
-                }
-            );
-            const urlData = await res.json();
-            setLoading(false);
-            return urlData.url;
-        } catch (error) {
-            setLoading(false);
-            console.log(error);
-        }
-    }
-
-    const [Name, setName] = useState("");
-    const [Email, setEmail] = useState("");
-    const [Phoen_No, setPhoen_No] = useState(0);
-    const [Error, setError] = useState("");
-
-    const user = JSON.parse(localStorage.getItem("User"));
-    const UserId = user.uid;
-    console.log("User id : ", UserId);
-
-    const Submit = async (e) => {
-
-        e.preventDefault();
-
-        if (!Name || !Email || !Phoen_No) {
-            setLoading(false);
-            return toast.error("Please fill in all fields");
-        }
-
-        // Image na thakle upload skip kore default image use hobe
-        let url = image ? await UploadImage() : null;
-        if (!url) {
-            url = imgUrl;
-        }
-
-        setLoading(true);
-        const NewUser = { Name, Email, image: url, Phoen_No, uid: UserId }
-        console.log(NewUser);
-
-        try {
-            const responce = await fetch(`${baseUrl}/route/cr`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(NewUser),
-            })
-
-            const result = await responce.json();
-            if (!responce.ok) {
-                console.log(result.error);
-                setError(result.error);
-                toast.error(result.error || "Something went wrong. Please try again.");
-                setLoading(false);
-                return;
-            }
-
-            toast.success("Submitted Successfully")
-            console.log(result);
-            setName("");
-            setEmail("");
-            setPhoen_No(0);
-            setError("");
-            setLoading(false);
-            nevigate('/dash');
-        } catch (error) {
-            console.log(error);
-            setError("Unable to reach the server");
-            toast.error("Unable to connect to the server. Please check your connection and try again.");
-            setLoading(false);
-        }
-
-    }
-
-    console.log(Error);
-
-    return (
-        <div>
-            <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="dark" />
-            <h1 className='text-center py-2 text-white text-3xl underline font-bold bg-orange-500'>Add someone to your circle</h1>
-            {
-                loading ?
-                    <div className="flex items-center justify-center py-24">
-                        <HashLoader
-                            color={"#36d7b7"}
-                            loading={loading}
-                            size={150}
-                            aria-label="Loading Spinner"
-                            data-testid="loader"
-                        />
-                    </div>
-
-                    :
-
-                    <div className="hero min-h-full lg:py-20 w-auto bg-base-200">
-                        <div className="hero-content py-4 lg: flex-col lg:flex-row-reverse">
-                            <div className="flex items-center flex-col">
-                                <figure className="w-52 h-52 lg:w-80 lg:h-80 rounded overflow-hidden" >
-                                    <img
-                                        src={preview || imgUrl}
-                                        alt="Insert Image"
-                                    />
-                                </figure>
-                                <br />
-                                <div className="flex items-center my-6 w-full justify-center h-7">
-                                    <label htmlFor="upload" className="btn btn-outline btn-accent w-full h-full">
-                                        Upload Image
-                                    </label>
-                                    <input
-                                        type="file"
-                                        id="upload"
-                                        hidden
-                                        accept="image/png, image/jpg, image/jpeg"
-                                        onChange={Upload}
-                                    />
-                                </div>
-                                <br />
-
-                            </div>
-                            <div className="flex justify-center">
-                                <form className="w-80 p-6 shadow-lg rounded-lg" onSubmit={Submit}>
-                                    <h2 className="text-2xl font-semibold mb-4">Contact details</h2>
-                                    <div className="mb-4">
-                                        <label htmlFor="name" className="block text-sm font-medium mb-1">
-                                            Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={Name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            className="w-full h-9 ps-4 rounded"
-                                            placeholder="Full name"
-                                        />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label htmlFor="email" className="block text-sm font-medium mb-1">
-                                            Email
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={Email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            className="w-full h-9 ps-4 rounded"
-                                            placeholder="Email address"
-                                        />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label htmlFor="Phoen_No" className="block text-sm font-medium mb-1">
-                                            Phone No
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={Phoen_No}
-                                            onChange={(e) => setPhoen_No(e.target.value)}
-                                            className="w-full h-9 ps-4 rounded"
-                                            placeholder="Phone number"
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        className="w-full mt-8 bg-indigo-500 text-white py-2 rounded-md hover:bg-indigo-600 transition duration-300"
-                                    >
-                                        {loading ? "Submitting ...." : "Submit"}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-            }
-        </div>
-    );
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('User') || '{}');
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ title: '', subject: '', type: 'Homework', dueDate: '', priority: 'Medium', status: 'Not started', pointsPossible: '', pointsEarned: '', estimatedMinutes: 30, notes: '' });
+  const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+  async function submit(event) {
+    event.preventDefault();
+    if (!form.title.trim() || !form.subject.trim()) return toast.error('Add an assignment title and course.');
+    if (form.pointsEarned && form.pointsPossible && Number(form.pointsEarned) > Number(form.pointsPossible)) return toast.error('Points earned cannot exceed points possible.');
+    setLoading(true);
+    try {
+      const payload = { ...form, estimatedMinutes: Number(form.estimatedMinutes), pointsPossible: form.pointsPossible === '' ? null : Number(form.pointsPossible), pointsEarned: form.pointsEarned === '' ? null : Number(form.pointsEarned), uid: user.uid };
+      const response = await fetch(`${baseUrl}/route/cr`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Could not save assignment.');
+      toast.success('Assignment added.'); navigate('/dash');
+    } catch (error) { toast.error(error.message || 'Unable to connect to the server.'); }
+    finally { setLoading(false); }
+  }
+  return <main className="page-enter mx-auto max-w-3xl px-4 py-10"><ToastContainer position="top-right" autoClose={4000} theme="colored" /><p className="text-xs font-extrabold uppercase tracking-[.2em] text-primary">Coursework tracker</p><h1 className="mb-2 mt-2 text-4xl font-black">Add an assignment</h1><p className="mb-6 opacity-65">Capture the brief, deadline, and what you need to submit.</p>
+    <form onSubmit={submit} className="surface-card grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
+      <label className="form-control"><span className="label-text mb-2">Assignment title *</span><input name="title" required maxLength="120" className="field-control" placeholder="e.g. Research essay draft" value={form.title} onChange={update} /></label>
+      <label className="form-control"><span className="label-text mb-2">Course / subject *</span><input name="subject" required maxLength="80" className="field-control" placeholder="e.g. Biology 101" value={form.subject} onChange={update} /></label>
+      <label className="form-control"><span className="label-text mb-2">Assignment type</span><select name="type" className="field-control" value={form.type} onChange={update}>{TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
+      <label className="form-control"><span className="label-text mb-2">Due date</span><input name="dueDate" type="date" className="field-control" value={form.dueDate} onChange={update} /></label>
+      <label className="form-control"><span className="label-text mb-2">Status</span><select name="status" className="field-control" value={form.status} onChange={update}><option>Not started</option><option>In progress</option><option>Submitted</option><option>Graded</option></select></label>
+      <label className="form-control"><span className="label-text mb-2">Priority</span><select name="priority" className="field-control" value={form.priority} onChange={update}><option>Low</option><option>Medium</option><option>High</option></select></label>
+      <label className="form-control"><span className="label-text mb-2">Points possible (optional)</span><input name="pointsPossible" type="number" min="0" max="10000" className="field-control" placeholder="e.g. 50" value={form.pointsPossible} onChange={update} /></label>
+      <label className="form-control"><span className="label-text mb-2">Points earned (optional)</span><input name="pointsEarned" type="number" min="0" max="10000" className="field-control" placeholder="Add after grading" value={form.pointsEarned} onChange={update} /></label>
+      <label className="form-control"><span className="label-text mb-2">Estimated work time (minutes)</span><input name="estimatedMinutes" type="number" min="5" max="1440" className="field-control" value={form.estimatedMinutes} onChange={update} /></label>
+      <label className="form-control sm:col-span-2"><span className="label-text mb-2">Instructions / notes</span><textarea name="notes" maxLength="1000" className="field-control min-h-32" placeholder="Requirements, links, or reminders for submission" value={form.notes} onChange={update} /></label>
+      <div className="flex gap-3 sm:col-span-2"><button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save assignment'}</button><button className="btn btn-ghost" type="button" onClick={() => navigate('/dash')}>Cancel</button></div>
+    </form>
+  </main>;
 };
-
 export default Register;

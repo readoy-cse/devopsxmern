@@ -1,220 +1,46 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import HashLoader from "react-spinners/HashLoader";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import imgUrl from '../../assets/Img/Untitled.png';
 import { baseUrl } from '../../utils/env';
 
+const TYPES = ['Homework', 'Essay', 'Project', 'Quiz', 'Exam', 'Lab', 'Other'];
+const STATUSES = ['Not started', 'In progress', 'Submitted', 'Graded'];
 const Update = () => {
-
-    const [image, setImage] = useState(null);
-    const [preview, setPreview] = useState(null);
-    const [loading, setLoading] = useState(false);
-
-    function Upload(e) {
-        const file = e.target.files[0];
-        if (file.size >= 1048576 * 4) {
-            return toast("Max Upload Size 4MB");
-        } else {
-            setImage(file);
-            setPreview(URL.createObjectURL(file));
-        }
-    }
-
-    async function UploadImage() {
-        const data = new FormData();
-        data.append("file", image);
-        data.append("upload_preset", "sjxeivct");
-        try {
-            setLoading(true);
-            let res = await fetch(
-                "https://api.cloudinary.com/v1_1/daoltrjyw/image/upload",
-                {
-                    method: "POST",
-                    body: data,
-                }
-            );
-            const urlData = await res.json();
-            setLoading(false);
-            return urlData.url;
-        } catch (error) {
-            setLoading(false);
-            console.log(error);
-        }
-    }
-
-    const [Name, setName] = useState("");
-    const [Email, setEmail] = useState("");
-    const [Phoen_No, setPhoen_No] = useState(0);
-
-    const Nevigate = useNavigate();
-    const [Error, setError] = useState();
-
-    const { id } = useParams();
-    const getData = async () => {
-        setLoading(true);
-        try {
-            const responce = await fetch(`${baseUrl}/route/get/${id}`)
-            const result = await responce.json();
-
-            if (responce.ok) {
-                setName(result.Name);
-                setEmail(result.Email);
-                setPhoen_No(result.Phoen_No);
-                setImage(result.image);
-                setLoading(false);
-            } else {
-                console.log(result.error);
-                setError(result.error);
-                toast.error(result.error || "Failed to load contact.");
-                setLoading(false);
-            }
-        } catch (error) {
-            console.log(error);
-            setError("Unable to reach the server");
-            toast.error("Unable to connect to the server. Please check your connection and try again.");
-            setLoading(false);
-        }
-    }
-
-    useEffect(() => {
-        getData();
-    }, [])
-
-
-    const Update = async (e) => {
-
-        e.preventDefault();
-
-        if (!Name || !Email || !Phoen_No) {
-            return toast.error("Please fill in all fields");
-        }
-
-        setLoading(true);
-        const url = await UploadImage(image);
-        console.log(url);
-
-        const updatedUser = { Name, Email, Phoen_No, image: url };
-        // console.log(updatedUser);
-        try {
-            const response = await fetch(`${baseUrl}/route/get/up/${id}`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(updatedUser),
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-                toast.success('Update Successfully !');
-                console.log("updated result..", result);
-                setError("");
-                Nevigate("/dash");
-                setLoading(false);
-            } else {
-                console.log(result.error);
-                setError(result.error);
-                toast.error(result.error || "An error occurred while updating.");
-                setLoading(false);
-            }
-        } catch (error) {
-            console.log(error);
-            setError("Unable to reach the server");
-            toast.error("Unable to connect to the server. Please check your connection and try again.");
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div>
-            <ToastContainer />
-            <h1 className='text-center text-3xl py-2 text-white underline font-bold bg-purple-500'>Update Your Contact</h1>
-            {
-                loading ? (
-                    <div className="flex items-center justify-center py-24">
-                        <HashLoader
-                            color={"#36d7b7"}
-                            loading={loading}
-                            size={150}
-                            aria-label="Loading Spinner"
-                            data-testid="loader"
-                        />
-                    </div>
-                )
-                    :
-                    <div className="hero min-h-full md:py-20 lg:py-20 bg-base-200">
-                        <div className="hero-content flex-col lg:flex-row-reverse">
-                            <div>
-                                <figure className="w-52 h-52 lg:w-80 lg:h-80 rounded overflow-hidden flex justify-center items-center" >
-                                    <img
-                                        src={preview || image || imgUrl }
-                                        alt="Insert Image"
-                                    />
-                                </figure>
-                                <div className="flex items-center my-6 justify-center h-5">
-                                    <label htmlFor="upload" className="btn btn-outline btn-accent w-full h-5">
-                                        Upload New Image
-                                    </label>
-                                    <input
-                                        type="file"
-                                        id="upload"
-                                        hidden
-                                        accept="image/png, image/jpg, image/jpeg"
-                                        onChange={Upload}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex justify-center">
-                                <form className="w-80 p-6 shadow-lg rounded-lg" onSubmit={Update}>
-                                    <h2 className="text-2xl font-semibold mb-4">Update Your Data</h2>
-                                    <div className="mb-4">
-                                        <label htmlFor="name" className="block text-sm font-medium mb-1">
-                                            Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={Name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            className="w-full h-9 ps-4 rounded"
-                                        />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label htmlFor="email" className="block text-sm font-medium mb-1">
-                                            Email
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={Email}
-                                            onChange={(e) => { setEmail(e.target.value) }}
-                                            className="w-full h-9 ps-4 rounded"
-                                        />
-                                    </div>
-                                    <div className="mb-4">
-                                        <label htmlFor="Phoen_No" className="block text-sm font-medium mb-1">
-                                            Phoen No
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={Phoen_No}
-                                            onChange={(e) => setPhoen_No(e.target.value)}
-                                            className="w-full h-9 ps-4 rounded"
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        className="w-full mt-8 bg-indigo-500 text-white py-2 rounded-md hover:bg-indigo-600 transition duration-300"
-                                    >
-                                        {loading ? "Update ...." : "Update"}
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-            }
-        </div>
-    );
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ title: '', subject: '', type: 'Homework', dueDate: '', priority: 'Medium', status: 'Not started', pointsPossible: '', pointsEarned: '', estimatedMinutes: 30, notes: '' });
+  useEffect(() => {
+    fetch(`${baseUrl}/route/get/${id}`).then(async (response) => {
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load assignment.');
+      setForm({ ...data, type: data.type || 'Homework', status: data.status || (data.completed ? 'Submitted' : 'Not started'), dueDate: data.dueDate ? data.dueDate.slice(0, 10) : '', pointsPossible: data.pointsPossible ?? '', pointsEarned: data.pointsEarned ?? '', estimatedMinutes: data.estimatedMinutes || 30 });
+    }).catch((error) => toast.error(error.message)).finally(() => setLoading(false));
+  }, [id]);
+  const update = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+  async function submit(event) {
+    event.preventDefault();
+    if (form.pointsEarned !== '' && form.pointsPossible !== '' && Number(form.pointsEarned) > Number(form.pointsPossible)) return toast.error('Points earned cannot exceed points possible.');
+    setLoading(true);
+    try {
+      const payload = { ...form, estimatedMinutes: Number(form.estimatedMinutes), pointsPossible: form.pointsPossible === '' ? null : Number(form.pointsPossible), pointsEarned: form.pointsEarned === '' ? null : Number(form.pointsEarned) };
+      const response = await fetch(`${baseUrl}/route/get/up/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not update assignment.');
+      toast.success('Assignment updated.'); navigate('/dash');
+    } catch (error) { toast.error(error.message); setLoading(false); }
+  }
+  return <main className="page-enter mx-auto max-w-3xl px-4 py-10"><ToastContainer position="top-right" theme="colored" /><p className="text-xs font-extrabold uppercase tracking-[.2em] text-primary">Keep your tracker current</p><h1 className="mb-2 mt-2 text-4xl font-black">Edit assignment</h1><p className="mb-6 opacity-65">Update its status, deadline, or grade.</p>{loading ? <p className="surface-card py-12 text-center">Loading assignment...</p> : <form onSubmit={submit} className="surface-card grid gap-5 p-6 sm:grid-cols-2 sm:p-8">
+    <label className="form-control"><span className="label-text mb-2">Assignment title *</span><input name="title" required className="field-control" value={form.title} onChange={update} /></label>
+    <label className="form-control"><span className="label-text mb-2">Course / subject *</span><input name="subject" required className="field-control" value={form.subject} onChange={update} /></label>
+    <label className="form-control"><span className="label-text mb-2">Assignment type</span><select name="type" className="field-control" value={form.type} onChange={update}>{TYPES.map((type) => <option key={type}>{type}</option>)}</select></label>
+    <label className="form-control"><span className="label-text mb-2">Due date</span><input name="dueDate" type="date" className="field-control" value={form.dueDate} onChange={update} /></label>
+    <label className="form-control"><span className="label-text mb-2">Status</span><select name="status" className="field-control" value={form.status} onChange={update}>{STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>
+    <label className="form-control"><span className="label-text mb-2">Priority</span><select name="priority" className="field-control" value={form.priority} onChange={update}><option>Low</option><option>Medium</option><option>High</option></select></label>
+    <label className="form-control"><span className="label-text mb-2">Points possible</span><input name="pointsPossible" type="number" min="0" max="10000" className="field-control" value={form.pointsPossible} onChange={update} /></label>
+    <label className="form-control"><span className="label-text mb-2">Points earned</span><input name="pointsEarned" type="number" min="0" max="10000" className="field-control" value={form.pointsEarned} onChange={update} /></label>
+    <label className="form-control"><span className="label-text mb-2">Estimated work time (minutes)</span><input name="estimatedMinutes" type="number" min="5" max="1440" className="field-control" value={form.estimatedMinutes} onChange={update} /></label>
+    <label className="form-control sm:col-span-2"><span className="label-text mb-2">Instructions / notes</span><textarea name="notes" className="field-control min-h-32" value={form.notes || ''} onChange={update} /></label>
+    <div className="flex gap-3 sm:col-span-2"><button className="btn btn-primary" type="submit">Save changes</button><button className="btn btn-ghost" type="button" onClick={() => navigate('/dash')}>Cancel</button></div>
+  </form>}</main>;
 };
-
 export default Update;

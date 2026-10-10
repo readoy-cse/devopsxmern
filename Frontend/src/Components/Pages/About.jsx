@@ -1,40 +1,9 @@
-import React from "react";
-import img from "../../assets/Img/Logo.jpg"
-import { Link } from "react-router-dom";
-import TeamMembers from "./TeamMembers";
+import React from 'react';
+import { Link } from 'react-router-dom';
 
-const About = () => {
-  return (
-    <div>
-      <div className="hero h-[100vh] md:h-[85vh]" style={{ backgroundImage: `url(${img})` }}>
-        <div className="hero-overlay bg-opacity-90"></div>
-        <div className="hero-content flex-col lg:flex-row-reverse text-white">
-          <img src={img} className=" hidden md:flex md:w-1/3 rounded" alt="" />
-          <div className=" w-full lg:w-9/12">
-            <div className=" max-w-2xl">
-              <h1 className="mb-5 text-5xl font-bold">About Frienemie</h1>
-              <p className="mb-5">Welcome to Frienemie - Your Trusted Contract Management Solution!<br /> At Frienemie, we are passionate about simplifying contract management for individuals and businesses alike. Our platform is built on a foundation of innovation, security, and user-friendliness. Our mission is to empower you with the tools you need to efficiently manage and store your contract information.</p>
-              <Link to={"/reg"} className="btn btn-outline btn-accent">Get Started</Link>
-            </div>
-          </div>
-        </div>
-      </div>
-      <br />
-      <hr />
-      <div className="py-8 md:py-4">
-        <Link to="/about/members#" className="btn btn-outline btn-accent w-full rounded-none">Haveing Troublr ? Meat Our Support Team</Link>
-      </div>
-      <div className=" flex justify-center items-center">
-        <figure className=" w-4/5 md:w-1/3">
-          <img src={img} alt="" className=" rounded" />
-        </figure>
-      </div>
-      <br />
-      <p className="text-center py-4 text-white text-3xl font-bold bg-blue-500">
-        Stay With Frienemie, ❤
-      </p>
-    </div>
-  );
-};
-
+const About = () => <main className="mx-auto max-w-5xl px-5 py-12">
+  <section className="rounded-3xl bg-base-200 px-6 py-14 text-center md:px-16"><p className="font-semibold uppercase tracking-[0.2em] text-primary">About Frienemie</p><h1 className="mx-auto mt-4 max-w-3xl text-4xl font-bold md:text-5xl">A clearer view of your coursework.</h1><p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed opacity-75">Frienemie is an assignment tracker that helps students organize coursework by class, type, due date, and submission status. Add notes for instructions, track work through grading, and keep marks in one place.</p><Link to="/reg" className="btn btn-primary mt-8">Add an assignment</Link></section>
+  <section className="mx-auto max-w-3xl py-12"><h2 className="text-2xl font-bold">From brief to grade</h2><ol className="mt-5 space-y-4">{['Add the assignment, course, type, and due date.', 'Update its status as you work and submit it.', 'Record the grade to keep your course progress visible.'].map((step, index) => <li key={step} className="flex items-start gap-4 rounded-xl border border-base-300 bg-base-100 p-4"><span className="font-bold text-primary">0{index + 1}</span><span>{step}</span></li>)}</ol></section>
+  <section className="border-t border-base-300 pt-8 text-center"><h2 className="text-2xl font-bold">Need help?</h2><p className="mt-2 opacity-70">Contact our team if you need a hand with your tracker.</p><Link to="/about/members" className="btn btn-outline mt-4">Visit support</Link></section>
+</main>;
 export default About;

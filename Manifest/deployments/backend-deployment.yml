@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name:  frienemie-backend-pod
-        image: ostreammonitor.oslrnd.com:30443/sakib-rnd/backend:latest
+        image: ostreammonitor.oslrnd.com:30443/sakib-rnd/backend:b686ac58
         ports:
         - containerPort: 2024
 

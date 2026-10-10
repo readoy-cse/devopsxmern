@@ -1,169 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import image from "../../assets/Img/Logo.jpg";
-import { signOut } from "firebase/auth";
-import { auth } from "../Authentication/firebaseConfig";
-import DarkToggle from "./DarkToggle";
-import ImgSrc from '../../assets/Img/Untitled.png';
-
-
-// const ImgSrc = "https://ae01.alicdn.com/kf/H7cb2cbb2abdc4138a1e1a758225f3f7ah/Disney-Brand-Mickey-Minnie-s-profile-picture-cloth-patches-Heat-Vinyl-Ironing-Stickers-Decor-Cheap-firm.jpg"
+import React from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../Authentication/firebaseConfig';
+import DarkToggle from './DarkToggle';
 
 const Navbar = () => {
-  const nevigate = useNavigate();
-
-
-  // Sinout Function
-  const Sinout = () => {
-    signOut(auth)
-      .then((value) => {
-        localStorage.removeItem("User");
-        console.log(value);
-        nevigate("/login");
-        window.location.reload();
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  };
-
-
-  const user = localStorage.getItem("User");
-
-  const UserData = JSON.parse(user);
-  const Data = [UserData];
-
-  const menu = (
-    <>
-      <li>
-        <NavLink to="/">Home</NavLink>
-      </li>
-      <li>
-        <NavLink to="/about">About</NavLink>
-      </li>
-
-      {!user && (
-        <>
-          <li>
-            <NavLink to="/login">Login</NavLink>
-          </li>
-          <li>
-            <NavLink to="/sinup">Sign Up</NavLink>
-          </li>
-        </>
-      )}
-
-      {user && (
-        <>
-          <li>
-            <NavLink to="/dash">All Contact</NavLink>
-          </li>
-          <li>
-            <NavLink to="/reg">Add Contact</NavLink>
-          </li>
-
-
-          {/* User Menu small Screen  */}
-          <div className="lg:hidden block">
-            <div tabIndex={0} className="ps-4 p-1 pb-2">
-              {
-                Data.map((user, ind) => (
-                  <figure key={ind} className="w-12 h-12 overflow-hidden rounded-full flex justify-center items-center">
-                    <img
-                      src={user.photoURL || ImgSrc}
-                      alt="User"
-                    />
-                  </figure>
-
-                ))
-              }
-            </div>
-            <ul className="w-[95%] mx-auto">
-              <li className="w-full flex items-center">
-                <NavLink className="btn-outline btn-sm mt4 text-center rounded w-full btn" to="/user">User Profile</NavLink>
-              </li>
-              <button className="btn btn-outline btn-error btn-sm mt4 rounded w-full mt-1" onClick={Sinout}>Sign Out</button>
-            </ul>
-          </div>
-
-
-          {/* User Menu Large Screen  */}
-          <div className="dropdown dropdown-end dropdown-hover py-4 lg:py-0 hidden lg:block">
-            <div tabIndex={0} className="ps-3 pt-1">
-              {
-                Data.map((user, ind) => (
-                  <Link to="/user">
-                    <figure key={ind} className="w-9 h-9 overflow-hidden rounded-full flex justify-center items-center">
-                      <img
-                        src={user.photoURL || ImgSrc}
-                        alt="User"
-                      />
-                    </figure>
-                  </Link>
-                ))
-              }
-            </div>
-            <ul
-              tabIndex={0}
-              className="dropdown-content z-[11] menu py-4 shadow bg-base-100 rounded-none w-52 px-6 text-center flex items-center border"
-            >
-              <li className="w-full flex items-center">
-                <NavLink className="btn-outline btn-sm mt-2 mx-auto text-center rounded w-full btn" to="/user">User Profile</NavLink>
-              </li>
-              <button className="btn btn-outline btn-error btn-sm mt-2 mx-auto rounded w-full" onClick={Sinout}>Sign Out</button>
-            </ul>
-          </div>
-        </>
-      )}
-
-      <div className="pt-3 mx-auto lg:ps-5">
-        <DarkToggle />
-      </div>
-
-    </>
-  );
-
-
-  return (
-    <>
-      <div className="mx-auto ms-4 me-5 md:ms-0 md:me-0 z-[1]">
-        <div className="navbar flex items-center justify-between">
-          <div className="navbar-start flex items-center">
-            <img className="w-12 rounded m-1 lg:m-4 ms-0" src={image} alt="" />
-            <NavLink
-              to="/"
-              className="normal-case cursor-pointer font-bold text-xl lg:text-3xl"
-            >
-              Frienemie
-            </NavLink>
-          </div>
-          <div className="navbar-end hidden lg:flex items-center">
-            <ul className="menu menu-horizontal items-center pt-2 px-1 z-[11]">{menu}</ul>
-          </div>
-          <div className="dropdown dropdown-hover dropdown-end">
-            <label tabIndex={0} className="btn btn-ghost lg:hidden">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h8m-8 6h16"
-                />
-              </svg>
-            </label>
-            <ul tabIndex={0} className="dropdown-content z-[21] menu p-4 py-4 shadow bg-base-100 rounded-box w-52" >{menu}</ul>
-          </div>
-        </div>
-      </div>
-      <hr />
-    </>
-  );
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('User') || 'null');
+  async function signout() {
+    try { await signOut(auth); } catch (error) { console.error(error); }
+    localStorage.removeItem('User');
+    navigate('/login');
+    window.location.reload();
+  }
+  const linkClass = ({ isActive }) => `rounded-lg px-3 py-2 text-sm font-semibold transition hover:bg-base-200 ${isActive ? 'bg-primary/10 text-primary' : 'opacity-75'}`;
+  return <header className="sticky top-0 z-30 border-b border-base-300/70 bg-base-100/90 backdrop-blur-xl">
+    <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 md:px-8">
+      <Link to="/" className="flex items-center gap-3" aria-label="Frienemie home"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-lg font-black text-primary-content shadow-sm">f.</span><span><span className="block text-lg font-extrabold leading-none tracking-tight">frienemie</span><span className="mt-1 block text-[10px] font-bold uppercase tracking-[.18em] opacity-50">study, gently</span></span></Link>
+      <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation"><NavLink to="/" className={linkClass}>Home</NavLink><NavLink to="/about" className={linkClass}>About</NavLink>{user && <><NavLink to="/dash" className={linkClass}>Assignments</NavLink><NavLink to="/reg" className={linkClass}>Add assignment</NavLink></>}</nav>
+      <div className="flex items-center gap-2"><DarkToggle />{user ? <div className="dropdown dropdown-end"><button tabIndex={0} className="btn btn-ghost btn-circle avatar" aria-label="Open account menu"><div className="w-9 rounded-full bg-base-300">{user.photoURL ? <img src={user.photoURL} alt="" /> : <span className="grid h-full place-items-center font-bold">{(user.displayName || user.email || 'S').charAt(0).toUpperCase()}</span>}</div></button><ul tabIndex={0} className="menu dropdown-content z-50 mt-3 w-52 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-xl"><li><Link to="/user">My profile</Link></li><li><button onClick={signout}>Sign out</button></li></ul></div> : <><Link to="/login" className="btn btn-ghost btn-sm hidden sm:inline-flex">Log in</Link><Link to="/sinup" className="btn btn-primary btn-sm">Get started</Link></>}</div>
+    </div>
+    {user && <nav className="flex justify-center gap-2 border-t border-base-300/60 px-3 py-2 md:hidden" aria-label="Mobile navigation"><NavLink to="/dash" className={linkClass}>Assignments</NavLink><NavLink to="/reg" className={linkClass}>Add assignment</NavLink><NavLink to="/user" className={linkClass}>Profile</NavLink></nav>}
+  </header>;
 };
-
 export default Navbar;
