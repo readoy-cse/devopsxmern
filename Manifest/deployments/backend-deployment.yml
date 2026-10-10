@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fri-backend
+  labels:
+    app: frienemie-backend-deploy
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frienemie-backend-pod
+  template:
+    metadata:
+      labels:
+        app: frienemie-backend-pod
+    spec:
+      containers:
+      - name:  frienemie-backend-pod
+        image: ostreammonitor.oslrnd.com:30443/sakib-rnd/backend:latest
+        ports:
+        - containerPort: 2024
+
+        env:
+        - name: Port
+          valueFrom:
+            configMapKeyRef:
+              name: frienemie-config
+              key: Backend_PORT
+        - name: Url
+          valueFrom:
+            configMapKeyRef:
+              name: frienemie-config
+              key: Backend_URL
+      

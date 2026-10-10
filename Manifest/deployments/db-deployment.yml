@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fri-db
+  labels:
+    app: frienemie-db-deploy
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frienemie-db-pod
+  template:
+    metadata:
+      labels:
+        app: frienemie-db-pod
+    spec:
+      containers:
+      - name:  frienemie-db-container
+        image: mongo:4.2
+        ports:
+        - containerPort: 27017

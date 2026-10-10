@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fri-frontend
+  labels:
+    app: frienemie-frontend-app
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frienemie-frontend-pod
+  
+  template:
+    metadata: 
+      labels:
+        app: frienemie-frontend-pod
+    spec:
+      containers:
+      - name: frontend-container
+        image: ostreammonitor.oslrnd.com:30443/sakib-rnd/frontend:186caf43
+        ports:
+        - containerPort: 80
+        env:
+        - name: VITE_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: frienemie-config
+              key: VITE_API_URL

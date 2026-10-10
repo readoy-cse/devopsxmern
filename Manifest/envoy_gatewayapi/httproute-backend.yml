@@ -1,0 +1,19 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: frienemie-api-route
+
+spec:
+  parentRefs:
+  - name: frienemie-gateway
+    sectionName: frienemie-api
+    
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend-svc
+      port: 2024
+  

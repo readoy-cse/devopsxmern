@@ -1,0 +1,15 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata: 
+  name: frienemie-gateway
+
+spec:
+  gatewayClassName: frienemie-gateway-class
+  listeners:
+    - name: frienemie-http
+      port: 80
+      protocol: HTTP
+
+    - name: frienemie-api
+      port: 9090
+      protocol: HTTP

@@ -1,0 +1,21 @@
+stages:
+  - build
+
+build-image:
+    stage: build
+    image: docker
+    services:
+      - name: docker:dind
+        alias: docker
+        command: ["--tls=false"]
+
+    variables:
+      DOCKER_HOST: tcp://docker:2375
+      DOCKER_TLS_CERTDIR: ""
+
+    script:
+      - echo "Commit Sha = $CI_COMMIT_SHORT_SHA"
+      - docker build -t frontend .
+      - docker tag frontend $HarborRepo/$HrProject/backend:$CI_COMMIT_SHORT_SHA
+      - echo "$HrPasswd" | docker login $HarborRepo -u $HrUser --password-stdin
+      - docker push $HarborRepo/$HrProject/backend:$CI_COMMIT_SHORT_SHA
