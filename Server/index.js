@@ -45,3 +45,8 @@ app.get('/',(req,res) => {
 app.listen(process.env.Port,() => {
     console.log(`Express Port Running at ${process.env.Port}`);
 });
+
+// Route for 404 Error
+app.use((req,res,next) => {
+    res.status(404).send("Page Not Found");
+})
