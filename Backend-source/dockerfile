@@ -1,0 +1,10 @@
+FROM node:slim
+
+WORKDIR /Server
+COPY package*.json /Server/
+RUN npm install
+
+COPY . .
+
+EXPOSE 2024
+CMD [ "node", "index.js" ]
