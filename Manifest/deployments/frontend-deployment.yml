@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: frontend-container
-        image: ostreammonitor.oslrnd.com:30443/sakib-rnd/frontend:3ff9de64
+        image: ry-harbor.osl.team/frienemie/frontend:771648d4
         ports:
         - containerPort: 80
         env:
