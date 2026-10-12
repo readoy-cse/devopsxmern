@@ -3,12 +3,13 @@ import { Link, useParams } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { baseUrl } from '../../utils/env';
+import { apiFetch } from '../../utils/logger';
 
 const ViewAssignment = () => {
   const { id } = useParams();
   const [assignment, setAssignment] = useState(null);
   useEffect(() => {
-    fetch(`${baseUrl}/route/get/${id}`).then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load assignment.'); setAssignment(data); }).catch((error) => toast.error(error.message));
+    apiFetch(`${baseUrl}/route/get/${id}`, undefined, 'assignments.read').then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load assignment.'); setAssignment(data); }).catch((error) => toast.error(error.message));
   }, [id]);
   const status = assignment?.status || (assignment?.completed ? 'Submitted' : 'Not started');
   const grade = assignment?.pointsEarned !== null && assignment?.pointsEarned !== undefined && assignment?.pointsPossible > 0 ? `${assignment.pointsEarned} / ${assignment.pointsPossible} (${Math.round(assignment.pointsEarned / assignment.pointsPossible * 100)}%)` : 'Not graded';

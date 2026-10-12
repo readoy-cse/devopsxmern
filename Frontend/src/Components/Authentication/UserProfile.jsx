@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { updateProfile } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 import { ToastContainer, toast } from 'react-toastify';
+import { logError, logInfo } from '../../utils/logger';
 
 const UserProfile = () => {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('User') || 'null'));
@@ -10,8 +11,8 @@ const UserProfile = () => {
   async function saveProfile(event) {
     event.preventDefault(); if (!auth.currentUser) return toast.error('Please sign in again.');
     setSaving(true);
-    try { await updateProfile(auth.currentUser, { displayName: name.trim() }); const updated = { uid: auth.currentUser.uid, displayName: name.trim(), email: auth.currentUser.email, photoURL: auth.currentUser.photoURL }; setUser(updated); localStorage.setItem('User', JSON.stringify(updated)); toast.success('Profile updated.'); }
-    catch (error) { toast.error(error.message || 'Could not update your profile.'); }
+    try { await updateProfile(auth.currentUser, { displayName: name.trim() }); const updated = { uid: auth.currentUser.uid, displayName: name.trim(), email: auth.currentUser.email, photoURL: auth.currentUser.photoURL }; setUser(updated); localStorage.setItem('User', JSON.stringify(updated)); logInfo('profile.update.succeeded'); toast.success('Profile updated.'); }
+    catch (error) { logError('profile.update.failed', error); toast.error(error.message || 'Could not update your profile.'); }
     finally { setSaving(false); }
   }
   if (!user) return <main className="py-20 text-center">Please sign in to view your profile.</main>;

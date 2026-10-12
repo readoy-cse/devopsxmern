@@ -4,12 +4,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth, GoogleProvider } from './firebaseConfig';
 import { ToastContainer, toast } from 'react-toastify';
 import HashLoader from 'react-spinners/HashLoader';
+import { logInfo, logWarn } from '../../utils/logger';
 
 const Signup = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
-  async function finishSignup(user) {
+  async function finishSignup(user, method) {
+    logInfo('auth.signup.succeeded', { method });
     localStorage.setItem('User', JSON.stringify(user));
     navigate('/dash');
     window.location.reload();
@@ -30,8 +32,9 @@ const Signup = () => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName: name });
-      await finishSignup(result.user);
+      await finishSignup(result.user, 'password');
     } catch (error) {
+      logWarn('auth.signup.failed', error, { method: 'password' });
       toast.error(error.message || 'Could not create your account.');
       setLoading(false);
     }
@@ -41,8 +44,9 @@ const Signup = () => {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, GoogleProvider);
-      await finishSignup(result.user);
+      await finishSignup(result.user, 'google');
     } catch (error) {
+      logWarn('auth.signup.failed', error, { method: 'google' });
       toast.error(error.message || 'Could not sign up with Google.');
       setLoading(false);
     }

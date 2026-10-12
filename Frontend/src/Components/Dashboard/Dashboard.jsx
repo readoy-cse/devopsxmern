@@ -4,6 +4,7 @@ import HashLoader from 'react-spinners/HashLoader';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { baseUrl } from '../../utils/env';
+import { apiFetch, logInfo } from '../../utils/logger';
 
 const STATUSES = ['Not started', 'In progress', 'Submitted', 'Graded'];
 const closed = (assignment) => ['Submitted', 'Graded'].includes(assignment.status || (assignment.completed ? 'Submitted' : 'Not started'));
@@ -23,7 +24,7 @@ const Dashboard = () => {
   async function getAssignments() {
     setLoading(true);
     try {
-      const response = await fetch(`${baseUrl}/route/read/${user.uid}`);
+      const response = await apiFetch(`${baseUrl}/route/read/${user.uid}`, undefined, 'assignments.list');
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not load your assignments.');
       setAssignments(Array.isArray(result) ? result : []);
@@ -37,6 +38,7 @@ const Dashboard = () => {
       if (remaining <= 1) {
         window.clearInterval(timer); setRunning(false);
         setFocusSessions((current) => { const next = current + 1; localStorage.setItem(focusKey, String(next)); return next; });
+        logInfo('focus.session.completed', { durationSeconds: 1500 });
         toast.success('Focus sprint complete. Take a short break!'); return 25 * 60;
       }
       return remaining - 1;
@@ -69,7 +71,7 @@ const Dashboard = () => {
 
   async function updateAssignment(item, changes) {
     try {
-      const response = await fetch(`${baseUrl}/route/get/up/${item._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
+      const response = await apiFetch(`${baseUrl}/route/get/up/${item._id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) }, 'assignments.update_status');
       const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not update assignment.');
       setAssignments((current) => current.map((assignment) => assignment._id === item._id ? result : assignment));
     } catch (error) { toast.error(error.message); }
@@ -77,7 +79,7 @@ const Dashboard = () => {
   async function deleteAssignment(id) {
     if (!window.confirm('Delete this assignment?')) return;
     try {
-      const response = await fetch(`${baseUrl}/route/del/${id}`, { method: 'DELETE' }); const result = await response.json();
+      const response = await apiFetch(`${baseUrl}/route/del/${id}`, { method: 'DELETE' }, 'assignments.delete'); const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not delete assignment.');
       setAssignments((current) => current.filter((item) => item._id !== id)); toast.success('Assignment deleted.');
     } catch (error) { toast.error(error.message); }
@@ -96,7 +98,7 @@ const Dashboard = () => {
     </section>
     <section className="mb-8 grid gap-5 lg:grid-cols-[1.3fr_.7fr]">
       <div className="surface-card flex flex-col justify-between gap-4 overflow-hidden p-6 sm:flex-row sm:items-center"><div><p className="text-xs font-extrabold uppercase tracking-[.18em] text-primary">Your momentum</p><h2 className="mt-2 text-2xl font-black">{progress === 100 && assignments.length ? 'Everything is submitted!' : progress > 0 ? 'You are moving forward.' : 'Start with the next deadline.'}</h2><p className="mt-2 max-w-lg text-sm leading-relaxed opacity-65">{assignments.length ? `${submitted} of ${assignments.length} assignments submitted or graded.` : 'Add your first assignment with its course and due date to build your tracker.'}</p></div><div className="grid h-24 w-24 shrink-0 place-items-center rounded-full border-[7px] border-primary/20 text-2xl font-black text-primary" style={{ background: `conic-gradient(hsl(var(--p)) ${progress}%, hsl(var(--b3)) ${progress}% 100%)` }}><span className="grid h-[4.1rem] w-[4.1rem] place-items-center rounded-full bg-base-100">{progress}%</span></div></div>
-      <div className="surface-card flex items-center justify-between gap-4 bg-primary p-5 text-primary-content"><div><p className="text-xs font-extrabold uppercase tracking-[.18em] opacity-75">Focus sprint</p><p className="mt-1 text-4xl font-black tabular-nums">{formattedTime}</p><p className="mt-1 text-xs opacity-75">25 min focus, then take a short break.</p><p className="mt-2 text-xs font-bold">{focusSessions} completed today</p></div><div className="flex flex-col gap-2"><button className="btn btn-sm border-0 bg-white/20 text-primary-content hover:bg-white/30" onClick={() => setRunning((value) => !value)}>{running ? 'Pause' : 'Start'}</button><button className="btn btn-ghost btn-xs text-primary-content" onClick={resetTimer}>Reset</button></div></div>
+      <div className="focus-card flex items-center justify-between gap-4 p-5"><div><p className="text-xs font-extrabold uppercase tracking-[.18em] opacity-80">Focus sprint</p><p className="mt-1 text-4xl font-black tabular-nums">{formattedTime}</p><p className="mt-1 text-xs opacity-80">25 min focus, then take a short break.</p><p className="mt-2 text-xs font-bold">{focusSessions} completed today</p></div><div className="flex flex-col gap-2"><button className="btn btn-sm border-0 bg-base-100 font-bold text-base-content shadow-sm hover:bg-base-200" onClick={() => setRunning((value) => !value)}>{running ? 'Pause' : 'Start'}</button><button className="btn btn-ghost btn-xs text-current" onClick={resetTimer}>Reset</button></div></div>
     </section>
     <section>
       <div className="mb-4"><h2 className="text-xl font-black">Your assignments</h2><p className="mt-1 text-sm opacity-60">Change status from the menu on each card. Open details for the brief and grade.</p></div>
@@ -105,21 +107,28 @@ const Dashboard = () => {
         const due = item.dueDate ? new Date(`${item.dueDate.slice(0, 10)}T00:00:00`) : null;
         const isOverdue = !closed(item) && due && due < today;
         const status = item.status || (item.completed ? 'Submitted' : 'Not started');
-        const priorityBorder = item.priority === 'High' ? 'border-l-error' : item.priority === 'Medium' ? 'border-l-secondary' : 'border-l-primary/40';
-        return <article key={item._id} className={`surface-card border-l-4 ${priorityBorder} p-5 transition hover:-translate-y-0.5 hover:shadow-lg`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2"><span className="badge badge-outline font-semibold">{item.subject}</span><span className="badge badge-ghost">{item.type || 'Homework'}</span><span className={`badge ${item.priority === 'High' ? 'badge-error' : item.priority === 'Medium' ? 'badge-warning' : 'badge-ghost'}`}>{item.priority}</span></div>
-              <h3 className="mt-3 break-words text-xl font-extrabold">{item.title}</h3>
+        const statusTone = status === 'Graded' ? 'badge-success' : status === 'Submitted' ? 'badge-info' : status === 'In progress' ? 'badge-warning' : 'badge-ghost';
+        return <article key={item._id} className="assignment-card">
+          <div className="assignment-card-accent" />
+          <div className="p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold uppercase tracking-[.15em] text-primary">{item.subject}</p>
+                <h3 className="mt-2 break-words text-xl font-extrabold leading-snug">{item.title}</h3>
+                <p className="mt-2 text-sm opacity-60">{item.type || 'Homework'} <span className="px-1 opacity-40">|</span> {item.priority} priority</p>
+              </div>
+              <span className={`badge shrink-0 ${statusTone}`}>{status}</span>
             </div>
-            <label className="shrink-0"><span className="sr-only">Status for {item.title}</span><select aria-label={`Update ${item.title} status`} className="select select-bordered select-sm w-[132px] text-xs font-semibold" value={status} onChange={(event) => updateAssignment(item, { status: event.target.value })}>{STATUSES.map((value) => <option key={value}>{value}</option>)}</select></label>
+            {item.notes && <p className="mt-4 line-clamp-2 text-sm leading-relaxed opacity-65">{item.notes}</p>}
+            <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-base-200/80 p-3.5">
+              <div><p className="text-[10px] font-extrabold uppercase tracking-widest opacity-45">Due date</p><p className={`mt-1 text-sm font-bold ${isOverdue ? 'text-error' : ''}`}>{due ? due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Not set'}{isOverdue && <span className="ml-1 text-[10px] uppercase">Overdue</span>}</p></div>
+              <div><p className="text-[10px] font-extrabold uppercase tracking-widest opacity-45">{status === 'Graded' ? 'Grade' : 'Work estimate'}</p><p className="mt-1 text-sm font-bold">{status === 'Graded' && item.pointsPossible ? `${item.pointsEarned ?? 'N/A'} / ${item.pointsPossible} points` : `${item.estimatedMinutes || 0} minutes`}</p></div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-base-300/70 pt-4">
+              <label className="flex items-center gap-2 text-xs font-semibold opacity-65"><span>Update status</span><select aria-label={`Update ${item.title} status`} className="select select-bordered select-xs w-[126px] bg-base-100 text-base-content" value={status} onChange={(event) => updateAssignment(item, { status: event.target.value })}>{STATUSES.map((value) => <option key={value}>{value}</option>)}</select></label>
+              <div className="flex gap-1"><Link className="btn btn-ghost btn-sm" to={`/dash/view/${item._id}`}>View</Link><Link className="btn btn-ghost btn-sm" to={`/dash/${item._id}`}>Edit</Link><button aria-label={`Delete ${item.title}`} className="btn btn-ghost btn-sm text-error" onClick={() => deleteAssignment(item._id)}>Delete</button></div>
+            </div>
           </div>
-          {item.notes && <p className="mt-3 line-clamp-2 text-sm leading-relaxed opacity-65">{item.notes}</p>}
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-base-300/70 pt-4 text-sm">
-            <span className={`font-bold ${isOverdue ? 'text-error' : 'opacity-70'}`}>{due ? `${isOverdue ? 'Overdue: ' : 'Due: '}${due.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : 'No deadline set'}</span>
-            {item.status === 'Graded' && item.pointsPossible ? <span className="font-bold text-primary">Grade: {item.pointsEarned ?? 'N/A'} / {item.pointsPossible}</span> : <span className="text-xs opacity-50">{item.estimatedMinutes || 0} min planned</span>}
-          </div>
-          <div className="mt-3 flex justify-end gap-1"><Link className="btn btn-ghost btn-sm" to={`/dash/view/${item._id}`}>View</Link><Link className="btn btn-ghost btn-sm" to={`/dash/${item._id}`}>Edit</Link><button className="btn btn-ghost btn-sm text-error" onClick={() => deleteAssignment(item._id)}>Delete</button></div>
         </article>;
       })}</div> : <div className="surface-card border-dashed py-16 text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-2xl text-primary">?</div><h2 className="mt-4 text-xl font-black">{assignments.length ? 'No assignments in this view' : 'Your tracker starts here'}</h2><p className="mx-auto mt-2 max-w-sm text-sm opacity-65">{assignments.length ? 'Try another filter, or add an assignment.' : 'Add an assignment, choose its course and due date, then track it through submission and grading.'}</p>{!assignments.length && <Link to="/reg" className="btn btn-primary mt-5">Add your first assignment</Link>}</div>}
     </section>

@@ -1,52 +1,84 @@
+const crypto = require('crypto');
 const express = require('express');
-const app = express();
-app.use(express.json());
-
-
-// Require .ENV 
+const cors = require('cors');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const logger = require('./utils/logger');
+const router = require('./DataBase/router');
+
 dotenv.config();
 
-// Require & use Cors 
-const cors = require('cors');
-app.use(cors());
+const app = express();
+app.use(cors({ exposedHeaders: ['X-Request-ID'] }));
 
-const server = require('http').createServer(app);
-server,{
-    cors:{
-        origin:'*',
-        methods:['GET','POST']
+app.use((req, res, next) => {
+  const incomingId = req.get('x-request-id');
+  req.requestId = incomingId && /^[a-zA-Z0-9._-]{1,80}$/.test(incomingId)
+    ? incomingId
+    : crypto.randomUUID();
+  const startedAt = process.hrtime.bigint();
+  res.setHeader('X-Request-ID', req.requestId);
+
+  res.on('finish', () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+    logger.write(level, 'http.request.completed', {
+      requestId: req.requestId,
+      method: req.method,
+      route: req.route ? `${req.baseUrl}${req.route.path}` : (req.path === '/' ? '/' : 'unmatched'),
+      statusCode: res.statusCode,
+      durationMs: Math.round(durationMs * 100) / 100,
+    });
+  });
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      logger.write('warn', 'http.request.aborted', {
+        requestId: req.requestId,
+        method: req.method,
+        route: req.route ? `${req.baseUrl}${req.route.path}` : 'unmatched',
+      });
     }
-}
+  });
+  next();
+});
+app.use(express.json({ limit: '1mb' }));
 
-// Connect to mongo DB
-const mongoose = require('mongoose')
+app.get('/', (_req, res) => res.status(200).json({ service: 'frienemie-api', status: 'ok' }));
+app.use('/route', router);
+app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
 
-const ConnectDb = async() => {
-    await mongoose.connect(process.env.Url)
-    .then(()=>{
-        console.log(`Connected To The Database ${process.env.Url}`);
-    }).catch((Error)=>{
-        console.log(Error);
-    })
-}
-ConnectDb();
-
-// import Router 
-const router = require('./DataBase/router')
-app.use('/route',router)
-
-//Running Port
-
-app.get('/',(req,res) => {
-    res.send("Post request")
-})
-
-app.listen(process.env.Port,() => {
-    console.log(`Express Port Running at ${process.env.Port}`);
+app.use((error, req, res, _next) => {
+  const statusCode = Number(error.status) >= 400 && Number(error.status) < 600 ? Number(error.status) : 500;
+  logger.write('error', 'http.request.failed', {
+    requestId: req.requestId,
+    method: req.method,
+    route: req.route ? `${req.baseUrl}${req.route.path}` : 'unmatched',
+    statusCode,
+    ...logger.errorDetails(error),
+  });
+  res.status(statusCode).json({
+    error: statusCode >= 500 ? 'Internal server error.' : error.message,
+    requestId: req.requestId,
+  });
 });
 
-// Route for 404 Error
-app.use((req,res,next) => {
-    res.status(404).send("Page Not Found");
-})
+async function start() {
+  try {
+    await mongoose.connect(process.env.Url);
+    logger.write('info', 'database.connected');
+    const port = process.env.Port || 2024;
+    app.listen(port, () => logger.write('info', 'server.started', { port: Number(port) || port }));
+  } catch (error) {
+    logger.write('error', 'database.connection.failed', logger.errorDetails(error));
+    process.exitCode = 1;
+  }
+}
+
+mongoose.connection.on('disconnected', () => logger.write('warn', 'database.disconnected'));
+mongoose.connection.on('reconnected', () => logger.write('info', 'database.reconnected'));
+
+process.on('unhandledRejection', (error) => {
+  logger.write('error', 'process.unhandled_rejection', logger.errorDetails(error));
+});
+
+start();

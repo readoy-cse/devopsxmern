@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { baseUrl } from '../../utils/env';
+import { apiFetch } from '../../utils/logger';
 
 const TYPES = ['Homework', 'Essay', 'Project', 'Quiz', 'Exam', 'Lab', 'Other'];
 const STATUSES = ['Not started', 'In progress', 'Submitted', 'Graded'];
@@ -12,7 +13,7 @@ const Update = () => {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ title: '', subject: '', type: 'Homework', dueDate: '', priority: 'Medium', status: 'Not started', pointsPossible: '', pointsEarned: '', estimatedMinutes: 30, notes: '' });
   useEffect(() => {
-    fetch(`${baseUrl}/route/get/${id}`).then(async (response) => {
+    apiFetch(`${baseUrl}/route/get/${id}`, undefined, 'assignments.read').then(async (response) => {
       const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load assignment.');
       setForm({ ...data, type: data.type || 'Homework', status: data.status || (data.completed ? 'Submitted' : 'Not started'), dueDate: data.dueDate ? data.dueDate.slice(0, 10) : '', pointsPossible: data.pointsPossible ?? '', pointsEarned: data.pointsEarned ?? '', estimatedMinutes: data.estimatedMinutes || 30 });
     }).catch((error) => toast.error(error.message)).finally(() => setLoading(false));
@@ -24,7 +25,7 @@ const Update = () => {
     setLoading(true);
     try {
       const payload = { ...form, estimatedMinutes: Number(form.estimatedMinutes), pointsPossible: form.pointsPossible === '' ? null : Number(form.pointsPossible), pointsEarned: form.pointsEarned === '' ? null : Number(form.pointsEarned) };
-      const response = await fetch(`${baseUrl}/route/get/up/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await apiFetch(`${baseUrl}/route/get/up/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, 'assignments.update');
       const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not update assignment.');
       toast.success('Assignment updated.'); navigate('/dash');
     } catch (error) { toast.error(error.message); setLoading(false); }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { baseUrl } from '../../utils/env';
+import { apiFetch } from '../../utils/logger';
 
 const TYPES = ['Homework', 'Essay', 'Project', 'Quiz', 'Exam', 'Lab', 'Other'];
 const Register = () => {
@@ -18,7 +19,7 @@ const Register = () => {
     setLoading(true);
     try {
       const payload = { ...form, estimatedMinutes: Number(form.estimatedMinutes), pointsPossible: form.pointsPossible === '' ? null : Number(form.pointsPossible), pointsEarned: form.pointsEarned === '' ? null : Number(form.pointsEarned), uid: user.uid };
-      const response = await fetch(`${baseUrl}/route/cr`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await apiFetch(`${baseUrl}/route/cr`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }, 'assignments.create');
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Could not save assignment.');
       toast.success('Assignment added.'); navigate('/dash');

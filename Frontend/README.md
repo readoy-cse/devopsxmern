@@ -18,3 +18,7 @@ Frienemie is a personal coursework tracker built with React, Vite, Express, and 
 Install dependencies in both `Frontend` and `Server`, configure the Firebase client settings and backend environment values, then start the Vite frontend and Express API. The backend expects `Url` for the MongoDB connection and `Port` for its listening port. The frontend API URL is configured in `Frontend/src/utils/env.js`.
 
 Each assignment stores a title, course, type, due date, status, priority, optional marks and notes, and the owning Firebase user ID.
+
+## Logs
+
+The frontend and API write one JSON object per log event. Records include a UTC timestamp, level, service, environment, and event name. API request logs also include a request ID, route template, status code, and duration; the same request ID is returned in the `X-Request-ID` header so browser and server logs can be matched. Logs intentionally omit request bodies, credentials, account identifiers, and assignment content. In containers, API logs go to standard output/error and can be read with the platform's container log viewer.

@@ -3,13 +3,16 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../Authentication/firebaseConfig';
 import DarkToggle from './DarkToggle';
+import { logInfo, logWarn } from '../../utils/logger';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('User') || 'null');
   async function signout() {
-    try { await signOut(auth); } catch (error) { console.error(error); }
+    let firebaseSignOut = 'succeeded';
+    try { await signOut(auth); } catch (error) { firebaseSignOut = 'failed'; logWarn('auth.signout.failed', error); }
     localStorage.removeItem('User');
+    logInfo('auth.signout.completed', { firebaseSignOut });
     navigate('/login');
     window.location.reload();
   }
