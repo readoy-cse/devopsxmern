@@ -1,113 +1,209 @@
-# Frienemie — Project Structure & DevOps Overview
+<div align="center">
 
-## 1. Purpose
+# Frienemie — Assignment Tracker
 
-Frienemie is a student assignment tracker. A student signs in through Firebase, manages coursework in a React web app, and the app calls an Express API that stores assignment records in MongoDB.
+### A containerized student productivity app with a GitLab CI/CD and Kubernetes delivery workflow
 
-This document describes the repository and the deployment flow represented by the checked-in configuration. It is an operational overview, not a claim that every manifest is production-ready.
+![GitLab](https://img.shields.io/badge/CI%2FCD-GitLab-FC6D26?logo=gitlab&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Platform-Kubernetes-326CE5?logo=kubernetes&logoColor=white)
+![Docker](https://img.shields.io/badge/Container-Docker-2496ED?logo=docker&logoColor=white)
+![Observability](https://img.shields.io/badge/Logs-Elastic%20%7C%20Kibana-005571?logo=elastic&logoColor=white)
 
-## 2. Architecture at a glance
+[Project Overview](#project-overview) · [DevOps Workflow](#devops-workflow) · [Screenshots](#screenshots) · [Run Locally](#run-locally)
+
+</div>
+
+## Project Overview
+
+Frienemie helps students organize assignments, due dates, priorities, submission status, and grades. It combines a React frontend, an Express API, MongoDB persistence, and Firebase authentication with a container-based deployment workflow.
+
+The repository is organized into three GitLab projects: **Frontend**, **Backend**, and **Manifest**. The application workloads are described with Kubernetes Deployments, Services, ConfigMaps, and Gateway API resources. GitLab pipelines build and publish versioned container images to Harbor, then update the corresponding image tag in the manifest repository. Argo CD monitors the manifest repository and syncs the desired state to Kubernetes. The included Argo CD screenshot shows the `frienemie` Application Healthy and Synced to `main`, with auto-sync enabled. Elastic/Kibana is used to explore Kubernetes and application platform logs.
+
+> This repository is also a DevOps portfolio project: it demonstrates source organization, image delivery, declarative deployment, and centralized log exploration.
+
+## Architecture
+
+![Frienemie DevOps architecture](docs/architecture.svg)
+
+### Request flow
+
+1. A student opens the React single-page application through the Envoy Gateway.
+2. The frontend is served by Nginx and uses Firebase for client-side authentication.
+3. The browser sends assignment API requests through the Gateway to the Express backend Service.
+4. The backend uses Mongoose to read and write assignment records in MongoDB.
+5. Application and Kubernetes logs can be explored in Elastic/Kibana.
+
+### Delivery flow
 
 ```text
-Developer commit
-   ├── Frontend GitLab pipeline ──> build frontend image ──> Harbor ──> update frontend manifest repo
-   └── Server GitLab pipeline   ──> build backend image  ──> Harbor ──> update backend manifest repo
-                                                                          │
-                                                               GitOps/deployment controller*
-                                                                          │
-Browser ──HTTP:80──> Envoy Gateway ──> frontend-svc ──> Nginx + React SPA
-Browser ──HTTP:9090─> Envoy Gateway ──> backend-svc  ──> Express API ──> db-svc ──> MongoDB
+Frontend / Backend commit
+          │
+          ▼
+     GitLab CI pipeline
+     ├── build-image
+     │      └── Docker build → commit-SHA tag → Harbor push
+     └── update-manifest
+            └── update image tag → commit to Manifest repository
+                                         │
+                                         ▼
+                               Argo CD auto-syncs desired state
+                                         │
+                                         ▼
+                                Kubernetes rollout
 ```
 
-`*` The repository contains CI jobs that commit changed image tags to a manifest repository. No Argo CD, Flux, or other manifest reconciliation controller configuration is present here, so automated apply/sync should be confirmed in the target cluster.
+## DevOps Workflow
 
-![Project Architecture](docs/architecture.svg)
+### GitLab project layout
 
-## 3. Repository map
+The work is split into application code and Kubernetes configuration so that image creation and deployment configuration are easy to follow independently.
 
-| Path | Responsibility | DevOps relevance |
-| --- | --- | --- |
-| `Frontend/` | React 18 + Vite SPA, Firebase client authentication, assignment and focus UI | `dockerfile` builds static assets and serves them with Nginx; `docker-entrypoint.sh` injects runtime API URL; `.gitlab-ci.yml` builds/pushes image and updates the frontend manifest |
-| `Frontend/src/Components/` | Pages, authentication, assignment dashboard, shared navigation | Main frontend feature code |
-| `Frontend/src/utils/env.js` | Selects API URL from Vite dev env or runtime `window.RUNTIME_CONFIG` | Same built image can be configured at container startup |
-| `Frontend/src/utils/logger.js` | Browser JSON logs and API request timing/request ID capture | Browser console is the current frontend log destination |
-| `Frontend/nginx.conf` | SPA fallback routing | Nginx serves `index.html` for client-side routes |
-| `Server/` | Express 4 API and Mongoose data access | `dockerfile` builds API image; `.gitlab-ci.yml` builds/pushes image and updates backend manifest |
-| `Server/DataBase/router.js` | Assignment API routes | `/route` API surface |
-| `Server/DataBase/Controller/` | Assignment CRUD logic | API behavior and data validation |
-| `Server/DataBase/Model/assignment.js` | MongoDB assignment schema | Persistent domain data shape |
-| `Server/utils/logger.js` | Backend JSON logs | Writes to stdout/stderr for container log collection |
-| `Manifest/deployments/` | Kubernetes frontend, backend, MongoDB Deployments | Declares image, replica count, ports and environment config |
-| `Manifest/services/` | ClusterIP Services | Internal stable addresses between workloads |
-| `Manifest/configmap/env-config.yml` | Runtime API URL, API port and Mongo URI | Non-secret runtime configuration (current Mongo URI is a ConfigMap value) |
-| `Manifest/envoy_gatewayapi/` | GatewayClass, Gateway and HTTPRoutes | External HTTP entry points for UI and API |
-| `Manifest/storage/pv.yml` | Intended storage manifest location | Currently empty; no PV/PVC or Mongo volume mount is configured here |
-| `Frontend/README.md` | Frontend product and local run notes | App-level reference |
+| GitLab project | Responsibility |
+| --- | --- |
+| `Frienemie-Frontend` | React/Vite application, Nginx container, frontend pipeline |
+| `Frienemie-Backend` | Express API, MongoDB integration, backend pipeline |
+| `Frienemie-Manifest` | Kubernetes Deployments, Services, ConfigMap, Gateway and HTTPRoutes; image tags updated by CI |
 
-## 4. Runtime request and data flow
+### CI/CD jobs
 
-1. A user loads the SPA through the Gateway listener on port 80 and `frontend-svc`.
-2. Nginx serves the React app; its startup script writes `config.js` using `VITE_API_URL` from the container environment.
-3. Firebase handles client-side email/Google authentication. The app uses the signed-in Firebase user ID when requesting that user's assignments.
-4. The browser calls the API through the Gateway listener on port 9090, routed to `backend-svc` on port 2024.
-5. Express routes assignment operations to Mongoose. The API connects to MongoDB using `Backend_URL`/`Url`; in Kubernetes that URL points to `mongodb://db-svc:27017/Frienemie`.
-6. MongoDB is exposed internally by `db-svc` on port 27017.
+The Frontend and Backend projects each define a GitLab pipeline with two main stages:
 
-The checked-in manifests define all three Deployments with one replica. They do not show readiness/liveness probes, resource requests/limits, autoscaling, PodDisruptionBudgets, or a MongoDB persistent volume mount.
+| Stage / job | What it does |
+| --- | --- |
+| `build` / `build-image` | Builds a Docker image, tags it with `CI_COMMIT_SHORT_SHA`, authenticates to Harbor, and pushes the image to the appropriate project repository. |
+| `update-manifest` | Clones the manifest repository, changes the matching Kubernetes Deployment image tag, then commits and pushes the update. |
 
-## 5. CI and image promotion
+GitLab CI variables provide registry and manifest-repository credentials. Keep credentials in protected/masked CI variables rather than in the repository.
 
-There are two independent GitLab pipelines: `Frontend/.gitlab-ci.yml` and `Server/.gitlab-ci.yml`. Both define `build` and `update-manifest` stages.
+### GitOps with Argo CD
 
-1. GitLab starts Docker-in-Docker and builds an image from the service directory.
-2. The image is tagged with `$CI_COMMIT_SHORT_SHA` and pushed to Harbor.
-3. The job clones the manifest repository using `Manifest_Token`, replaces the matching image tag, commits, and pushes to `main`.
-4. A cluster-side reconciler or a separate deployment step must apply that manifest commit for the running Pods to change. That component is not defined in this repository.
+The Manifest repository is the declarative source of the desired Kubernetes image versions and application resources. The CI pipeline updates the image tag there; Argo CD monitors the configured repository/path and automatically syncs the desired state to the cluster. The captured Argo CD application view reports **Healthy**, **Synced to `main`**, and **Auto sync is enabled**; its resource tree includes the frontend, backend, database, Services, Gateway, and HTTPRoutes. This separates **building/publishing** an image from **reconciling** the deployment configuration.
 
-CI variables referenced by the jobs include `HarborRepo`, `HrProject`, `HrUser`, `HrPasswd`, `Manifest_Token`, `Manifest_Repo`, `Gitlab_Email`, and `Gitlab_User`. Store credentials as protected/masked GitLab CI variables; do not commit them to YAML.
+### Kubernetes deployment
 
-## 6. Configuration and observability
+- **Gateway API / Envoy Gateway** exposes separate HTTP listeners and routes traffic to the UI and API Services.
+- **Frontend Deployment and Service** run the Nginx-hosted React application.
+- **Backend Deployment and Service** run the Express API.
+- **MongoDB Deployment and Service** provide assignment storage.
+- **ConfigMap** supplies non-secret runtime values such as the API URL and MongoDB connection URI.
 
-- Frontend production API URL comes from `VITE_API_URL` at container startup; development uses Vite's `VITE_API_URL`.
-- Backend expects `Port` and `Url`. The Kubernetes ConfigMap maps these to `Backend_PORT` and `Backend_URL`.
-- Frontend and backend emit one JSON object per log event. Backend records are available on container stdout/stderr; browser records are in the browser developer console. API request IDs are returned in `X-Request-ID`, allowing browser/API log correlation when the header is readable across CORS.
-- No centralized log collector, metrics backend, tracing system, alert rules, or dashboards are configured in this repository.
-- The ConfigMap contains the MongoDB connection URI. It currently has no credential, but if credentials are introduced, move the URI to a Kubernetes Secret and reference it from the Deployment.
+### Logging and observability
 
-## 7. Current deployment gaps to resolve
+The application emits structured JSON log events from the browser and backend. Backend container logs are written to stdout/stderr; the API returns an `X-Request-ID` so frontend and backend request records can be correlated. Elastic/Kibana provides a place to inspect Kubernetes and platform logs, filter by namespace/container, and investigate deployment activity.
 
-These are directly visible in the checked-in configuration and should be reviewed before relying on automated delivery:
+## Screenshots
 
-1. **Backend pipeline image build context/tag mismatch:** the backend CI job runs `docker build -t frontend .` and then tags that image as the backend image. It should build from the `Server/` context and use a backend-specific local tag. Verify GitLab's configured project directory before changing the command.
-2. **Frontend runtime URL and Gateway mismatch:** `Manifest/configmap/env-config.yml` sets `VITE_API_URL` to `http://192.168.200.189:9090`; verify this address is reachable by browser clients and matches the Envoy Gateway listener address/DNS and API route.
-3. **Persistence:** `Manifest/storage/pv.yml` is empty, and the MongoDB Deployment has no PVC mount. MongoDB data may be lost when its Pod is recreated, depending on the cluster's backing storage behavior.
-4. **MongoDB lifecycle:** `mongo:4.2` is old and the Deployment has a single replica without persistent storage or backup configuration. Plan a supported version upgrade, data migration, backups, and restore validation.
-5. **Secrets and image pulls:** manifests do not define `imagePullSecrets`, nor Kubernetes Secrets for runtime credentials. Confirm the cluster can pull private Harbor images and configure secrets securely where needed.
-6. **Operational controls:** add probes, resource requests/limits, rollout strategy, and an explicit namespace/environment overlay before production use.
-7. **Manifest handoff:** pipelines push to a separately cloned manifest repository. Confirm repository path/branch, commit permissions, and the mechanism that reconciles those commits into the cluster.
+### GitLab project structure
 
-## 8. Suggested release verification checklist
+The GitLab group contains separate Frontend, Backend, and Manifest repositories.
 
-- Confirm each pipeline builds the intended Dockerfile and tags the intended repository/image.
-- Confirm pushed image digest and manifest tag agree with the commit SHA.
-- Confirm the manifest commit is reconciled to the intended cluster and namespace.
-- Check Gateway and HTTPRoute status, DNS/IP, and browser access to both UI and API listeners.
-- Check frontend runtime config in the running container and verify an API request returns an `X-Request-ID`.
-- Inspect frontend console logs and backend Pod logs; correlate using request ID.
-- Verify API readiness and MongoDB connectivity, then exercise a create/read/update/delete workflow.
-- Before production, verify persistent MongoDB storage, backup and restore, resource sizing, health probes, and secret handling.
+![Frienemie GitLab projects](docs/Projects-in-gitlab.png)
 
-## 9. Useful commands
+### GitLab pipeline jobs
 
-Run from a machine with kubectl configured for the target cluster:
+Pipeline job history shows the image build and manifest update stages.
+
+![GitLab pipeline jobs](docs/gitlab-jobs.png)
+
+### Harbor image registry
+
+Frontend and Backend images are published as separate Harbor repositories.
+
+![Harbor project repositories](docs/harbor-project.png)
+
+### Argo CD application status
+
+The captured `frienemie` Argo CD Application is Healthy and Synced to the `main` branch. Auto-sync is enabled, and the resource tree shows the Kubernetes resources managed by the application.
+
+![Argo CD Frienemie application healthy and synced](docs/argocd.png)
+
+### Elastic / Kibana log exploration
+
+Kibana Discover view used to inspect Kubernetes log records and filter the data by namespace and container.
+
+![Elastic Kibana Kubernetes log view](docs/elk-dashboard.png)
+
+## Technology Stack
+
+| Area | Technologies |
+| --- | --- |
+| Frontend | React, Vite, Nginx, Firebase Authentication |
+| Backend | Node.js, Express, Mongoose |
+| Database | MongoDB |
+| Containers and registry | Docker, Harbor |
+| CI/CD and GitOps | GitLab CI/CD, Argo CD, Git-managed Kubernetes manifests |
+| Platform and routing | Kubernetes, Gateway API, Envoy Gateway |
+| Logs | Structured JSON application logs, Elastic/Kibana |
+
+## Repository Structure
+
+```text
+.
+├── Frontend/
+│   ├── src/                       # React app, pages, authentication and log utilities
+│   ├── dockerfile                 # Build assets and package the Nginx image
+│   ├── docker-entrypoint.sh       # Inject runtime API URL into the frontend container
+│   ├── nginx.conf                 # SPA routing fallback
+│   └── .gitlab-ci.yml             # Frontend image and manifest update jobs
+├── Server/
+│   ├── DataBase/                  # API routes, controllers and assignment model
+│   ├── utils/logger.js            # Structured backend logger
+│   ├── dockerfile                 # Backend image definition
+│   └── .gitlab-ci.yml             # Backend image and manifest update jobs
+├── Manifest/
+│   ├── deployments/               # Frontend, backend and MongoDB Deployments
+│   ├── services/                  # ClusterIP Services
+│   ├── configmap/                 # Runtime configuration
+│   ├── envoy_gatewayapi/          # GatewayClass, Gateway and HTTPRoutes
+│   └── storage/                   # Storage manifest location
+└── docs/
+    ├── architecture.svg
+    ├── Projects-in-gitlab.png
+    ├── gitlab-jobs.png
+    ├── harbor-project.png
+    ├── argocd.png
+    └── elk-dashboard.png
+```
+
+## Run Locally
+
+### Prerequisites
+
+- Node.js and npm
+- A MongoDB instance
+- Firebase client configuration for authentication
+
+### Backend
 
 ```sh
-kubectl get gateway,httproute
-kubectl get deploy,svc,pods
-kubectl describe httproute frienemie-api-route
-kubectl logs deploy/fri-frontend --follow
-kubectl logs deploy/fri-backend --follow
-kubectl logs deploy/fri-db --follow
+cd Server
+npm install
+# Set Port and Url in the local environment
+npm start
 ```
 
-Names/namespaces can differ by cluster. For the API, inspect request IDs and structured JSON fields in the backend output. Browser logs remain available in the browser developer console unless a browser telemetry collector is added.
+### Frontend
+
+In another terminal:
+
+```sh
+cd Frontend
+npm install
+# Configure VITE_API_URL and Firebase client settings
+npm run start
+```
+
+The backend uses `Port` and `Url` for its listener and MongoDB connection. The frontend reads `VITE_API_URL`; production containers receive the API URL at startup.
+
+## CV / Portfolio Summary
+
+**Frienemie — Assignment Tracker | DevOps & Full-Stack Project**
+
+- Built a student assignment tracking application with React, Express, MongoDB, and Firebase Authentication.
+- Created GitLab CI/CD workflows to build Docker images, tag releases with commit SHAs, publish images to Harbor, and update Kubernetes manifests.
+- Organized Kubernetes application resources and used an Argo CD GitOps flow to reconcile manifest changes to the cluster.
+- Added structured application logging and used Elastic/Kibana to explore Kubernetes log data during deployment and troubleshooting.
+
+## Notes
+
+Deployment details such as cluster address, namespace, Argo CD application path, and registry credentials depend on the target environment. Configure these for your own cluster before applying the manifests. Never commit secrets or private credentials to Git.
