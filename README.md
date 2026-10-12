@@ -21,7 +21,7 @@ Browser ──HTTP:9090─> Envoy Gateway ──> backend-svc  ──> Express A
 
 `*` The repository contains CI jobs that commit changed image tags to a manifest repository. No Argo CD, Flux, or other manifest reconciliation controller configuration is present here, so automated apply/sync should be confirmed in the target cluster.
 
-For the editable diagram, open [`docs/architecture.excalidraw`](docs/architecture.excalidraw) in Excalidraw (File → Open), or import it into excalidraw.com. Export PNG/SVG from Excalidraw when you need a static copy.
+![Project Architecture](docs/architecture.svg)
 
 ## 3. Repository map
 
