@@ -25,6 +25,8 @@ The repository is organized into three GitLab projects: **Frontend**, **Backend*
 
 ![Frienemie DevOps architecture](docs/architecture.svg)
 
+For the detailed pipeline stages and CI/CD variable guide, see the [CI/CD delivery flow diagram](docs/cicd-flow.excalidraw).
+
 ### Request flow
 
 1. A student opens the React single-page application through the Envoy Gateway.
@@ -36,21 +38,24 @@ The repository is organized into three GitLab projects: **Frontend**, **Backend*
 ### Delivery flow
 
 ```text
-Frontend / Backend commit
-          │
-          ▼
-     GitLab CI pipeline
-     ├── build-image
-     │      └── Docker build → commit-SHA tag → Harbor push
-     └── update-manifest
-            └── update image tag → commit to Manifest repository
-                                         │
-                                         ▼
-                               Argo CD auto-syncs desired state
-                                         │
-                                         ▼
-                                Kubernetes rollout
+Frontend / Backend source commit
+              │
+              ▼
+      GitLab CI pipeline
+       ├─ Build Docker image → tag with commit SHA → push to Harbor
+       └─ Update image tag in Manifest repository
+                            │
+                            ▼
+                    Argo CD detects change
+                            │ auto-sync
+                            ▼
+                 Kubernetes applies manifests
+                            │
+                            ▼
+           Deployment rollout → Service → Gateway
 ```
+
+The architecture diagram also shows the MongoDB storage relationship: the database pod mounts a **PersistentVolumeClaim (PVC)**, which binds to a **PersistentVolume (PV)**. The PV/PVC are drawn as architecture placeholders; update their capacity, storage class, access mode, and claim reference for your cluster in the Manifest project.
 
 ## DevOps Workflow
 
@@ -145,7 +150,7 @@ Kibana Discover view used to inspect Kubernetes log records and filter the data 
 │   ├── docker-entrypoint.sh       # Inject runtime API URL into the frontend container
 │   ├── nginx.conf                 # SPA routing fallback
 │   └── .gitlab-ci.yml             # Frontend image and manifest update jobs
-├── Server/
+├── Backend/
 │   ├── DataBase/                  # API routes, controllers and assignment model
 │   ├── utils/logger.js            # Structured backend logger
 │   ├── dockerfile                 # Backend image definition
@@ -165,37 +170,9 @@ Kibana Discover view used to inspect Kubernetes log records and filter the data 
     └── elk-dashboard.png
 ```
 
-## Run Locally
-
-### Prerequisites
-
-- Node.js and npm
-- A MongoDB instance
-- Firebase client configuration for authentication
-
-### Backend
-
-```sh
-cd Server
-npm install
-# Set Port and Url in the local environment
-npm start
-```
-
-### Frontend
-
-In another terminal:
-
-```sh
-cd Frontend
-npm install
-# Configure VITE_API_URL and Firebase client settings
-npm run start
-```
-
 The backend uses `Port` and `Url` for its listener and MongoDB connection. The frontend reads `VITE_API_URL`; production containers receive the API URL at startup.
 
-## CV / Portfolio Summary
+## Summary
 
 **Frienemie — Assignment Tracker | DevOps & Full-Stack Project**
 
