@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name:  frienemie-backend-pod
-        image: ry-harbor.osl.team/frienemie/backend:b686ac58
+        image: ry-harbor.osl.team/frienemie/backend:10b962a5
         ports:
         - containerPort: 2024
 

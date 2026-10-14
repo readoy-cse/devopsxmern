@@ -1,0 +1,45 @@
+
+---
+- name: Add new entry to /etc/hosts
+  hosts: k3s-cluster
+  become: true
+  tags:
+    - add-hosts-entry
+
+  tasks:
+    - name: Add hostname entry
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "192.168.200.21 ry-harbor.osl.team"
+        state: present
+
+- name: install nfs-common package
+  hosts: k3s-cluster
+  become: true
+  tags:
+    - install-nfs-common
+
+  tasks:
+    - name: Install nfs-common package
+      ansible.builtin.package:
+        name: nfs-common
+        state: present
+
+- name: Enabled and start nfs-client.target
+  hosts: k3s-cluster
+  become: true
+  tags:
+    - enable-nfs-client
+
+  tasks:
+    - name: Unmask nfs-common service
+      ansible.builtin.command:
+        cmd: sudo systemctl unmask nfs-common.service
+      changed_when: false
+
+    - name: Enable and start nfs-common service
+      ansible.builtin.systemd:
+        name: nfs-common.service
+        enabled: true
+        state: started
+      failed_when: false
