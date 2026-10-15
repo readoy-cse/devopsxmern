@@ -120,7 +120,14 @@ Frontend and Backend images are published as separate Harbor repositories.
 
 The captured `frienemie` Argo CD Application is Healthy and Synced to the `main` branch. Auto-sync is enabled, and the resource tree shows the Kubernetes resources managed by the application.
 
-![Argo CD Frienemie application healthy and synced](docs/argocd.png)
+Node & Pods
+![Argo CD Frienemie application healthy and synced](docs/argocd-k3s-nodes.png)
+
+Network Flows
+![Argo CD Frienemie application healthy and synced](docs/argocd-net-flow.png)
+
+Resources Tree
+![Argo CD Frienemie application healthy and synced](docs/argocd-resources-tree.png)
 
 ### Elastic / Kibana log exploration
 
