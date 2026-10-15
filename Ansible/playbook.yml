@@ -25,21 +25,4 @@
         name: nfs-common
         state: present
 
-- name: Enabled and start nfs-client.target
-  hosts: k3s-cluster
-  become: true
-  tags:
-    - enable-nfs-client
 
-  tasks:
-    - name: Unmask nfs-common service
-      ansible.builtin.command:
-        cmd: sudo systemctl unmask nfs-common.service
-      changed_when: false
-
-    - name: Enable and start nfs-common service
-      ansible.builtin.systemd:
-        name: nfs-common.service
-        enabled: true
-        state: started
-      failed_when: false
